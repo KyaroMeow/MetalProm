@@ -4,8 +4,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Windows.Forms;
 using SQLitePCL;
-using static MetalProm.Form1;
-using System.Data;
+
 
 namespace MetalProm
 {
@@ -17,6 +16,8 @@ namespace MetalProm
         public Form1()
         {
             InitializeComponent();
+            comboBox1.Items.Add("Архивный шкаф");
+            comboBox1.Items.Add("Верстак");
         }
         public void UpdateData()
         {
@@ -30,7 +31,7 @@ namespace MetalProm
                     material.ID,
                     material.Name,
                     material.Count
-                    
+
                 );
             }
             dataGridView1.DataSource = dataTable;
@@ -38,7 +39,41 @@ namespace MetalProm
 
         private void Craft_click(object sender, EventArgs e)
         {
+            int countProduct=Convert.ToInt32(textBox1.Text);
+            int[] countsMaterials = { 20, 2, 0, 5 };
+            if (comboBox1.Text == "Верстак")
+            {
+                countsMaterials = new int[] { 10, 0, 2, 2 };
 
+            }
+            for(int i = 0; i <= 3; i++)
+            {
+                countsMaterials[i] *= countProduct;
+            }
+            
+            string[] names = { "Саморезы", "Большая дверь", "Дверь тумбочки", "Полка" };
+            int[] counts = new int[4];
+            for (int i = 0; i <= 3; i++)
+            {
+                counts[i] = CheckCount(names[i])-countsMaterials[i];
+                string query = $"UPDATE storage SET count = {counts[i]} WHERE material = '{names[i]}'";
+                Command(query);
+            }
+            UpdateData();
+        }
+        public int CheckCount(string materialName)
+        {
+            using (var connection = new SqliteConnection("Data Source=Storage.db"))
+            {
+                string quaryCheck = $"SELECT count FROM storage WHERE material = '{materialName}'";
+                connection.Open();
+                SqliteCommand command = new SqliteCommand();
+                command.Connection = connection;
+                command.CommandText = quaryCheck;
+                object result = command.ExecuteScalar();
+                int count = Convert.ToInt32(result);
+                return count;
+            }
         }
 
         private void Form1_Load(object sender, EventArgs e)
@@ -84,21 +119,18 @@ namespace MetalProm
                 SqliteCommand command = new SqliteCommand(sqlExpression, connection);
                 using (SqliteDataReader reader = command.ExecuteReader())
                 {
-                    if (reader.HasRows) // если есть данные
+                    while (reader.Read())
                     {
-                        while (reader.Read())   // построчно считываем данные
-                        {
-                            var id = reader.GetValue(0);
-                            var name = reader.GetValue(1);
-                            var count = reader.GetValue(2);
+                        var id = reader.GetValue(0);
+                        var name = reader.GetValue(1);
+                        var count = reader.GetValue(2);
 
-                            material.Add(new Material
-                            {
-                                ID = Convert.ToInt32(id),
-                                Name = name.ToString(),
-                                Count = Convert.ToInt32(count)
-                            });
-                        }
+                        material.Add(new Material
+                        {
+                            ID = Convert.ToInt32(id),
+                            Name = name.ToString(),
+                            Count = Convert.ToInt32(count)
+                        });
                     }
                 }
             }
